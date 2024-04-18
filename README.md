@@ -7,7 +7,7 @@ It also allows you to add custom rules and your sitemaps to your robots.txt file
 ## Installation
 
 ```bash
-composer require mauricerenck/dark-visitors
+composer require mauricerenck/darkvisitors
 ```
 
 Or download the [latest release](https://github.com/mauricerenck/dark-visitors/releases) unzip it, copy it to `site/plugins/dark-visitors`
