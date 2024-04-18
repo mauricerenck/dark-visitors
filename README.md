@@ -57,7 +57,7 @@ Setting your custom rules will overwrite the default rules, which are:
     'userAgents' => ['*'],
     'disallow' => ['/kirby', '/site'],
 ];
-``D
+```
 
 ### Sitemaps
 
@@ -68,7 +68,7 @@ Add your sitemaps to the robots.txt file:
     'Sitemap: https://your-site.tld/sitemap.xml',
     'Sitemap: https://your-site.tld/sitemap2.xml',
 ],
-````
+```
 
 ## Learn more about robots.txt and AI crawlers
 
