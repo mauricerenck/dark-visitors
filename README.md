@@ -52,7 +52,7 @@ Add your custom rules to the robots.txt file:
 
 Setting your custom rules will overwrite the default rules, which are:
 
-````php
+```php
 [
     'userAgents' => ['*'],
     'disallow' => ['/kirby', '/site'],
