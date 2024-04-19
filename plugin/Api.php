@@ -35,6 +35,10 @@ class Api
 
     public function getLatestAgents()
     {
+        if (count($this->agentTypes) === 0) {
+            return null;
+        }
+
         $body = [
             'agent_types' => $this->agentTypes,
             'disallow' => '/',
