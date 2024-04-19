@@ -1,6 +1,6 @@
 {
     "name": "mauricerenck/darkvisitors",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "Kirby robots.txt plugin for blocking AI Crawlers and Bots",
     "homepage": "https://github.com/mauricerenck/dark-visitors",
     "type": "kirby-plugin",
