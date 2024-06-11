@@ -15,13 +15,12 @@
         "psr-4": {
             "mauricerenck\\DarkVisitors\\": "plugin"
         },
-        "classmap": [
-            "plugin"
-        ]
+        "classmap": ["plugin"]
     },
     "require": {
         "getkirby/composer-installer": "^1.2",
-        "php": ">=8.0.0"
+        "php": ">=8.0.0",
+        "amphp/amp": "^3.0"
     },
     "require-dev": {
         "getkirby/cms": "^4",
@@ -34,17 +33,10 @@
         }
     },
     "scripts": {
-        "start": [
-            "Composer\\Config::disableProcessTimeout",
-            "php -S localhost:8000 kirby/router.php"
-        ],
+        "start": ["Composer\\Config::disableProcessTimeout", "php -S localhost:8000 kirby/router.php"],
         "test": "vendor/bin/phpunit --testdox --colors=always tests",
         "build-test-package": "git archive HEAD -o dark-visitors.zip --worktree-attributes",
         "build-composer": "composer install --no-dev --optimize-autoloader",
-        "build-release": [
-            "composer test",
-            "composer install --no-dev --optimize-autoloader",
-            "npm run build"
-        ]
+        "build-release": ["composer install --no-dev --optimize-autoloader"]
     }
 }

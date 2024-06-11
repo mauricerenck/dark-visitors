@@ -56,4 +56,19 @@ class Api
 
         return $request->content();
     }
+
+    public function trackAgent($requestPath, $requestMethod, $requestHeaders)
+    {
+        $body = [
+            'request_path' => $requestPath,
+            'request_method' => $requestMethod,
+            'request_headers' => $requestHeaders,
+        ];
+
+        return Remote::request('https://api.darkvisitors.com/visits', [
+            'method' => 'POST',
+            'headers' => ['Content-Type: application/json', 'Authorization: Bearer ' . $this->token],
+            'data' => json_encode($body),
+        ]);
+    }
 }
