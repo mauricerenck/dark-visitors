@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/mauricerenck/dark-visitors/compare/v1.0.1...v1.1.0) (2024-06-11)
+
+
+### Features
+
+* dark visitors analytics ([5acdd5a](https://github.com/mauricerenck/dark-visitors/commit/5acdd5a306c65019967a31cf26d95bb0b18eb5f4))
+
 ## [1.0.1](https://github.com/mauricerenck/dark-visitors/compare/v1.0.0...v1.0.1) (2024-04-19)
 
 

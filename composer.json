@@ -1,6 +1,6 @@
 {
     "name": "mauricerenck/darkvisitors",
-    "version": "1.0.1",
+    "version": "1.1.0",
     "description": "Kirby robots.txt plugin for blocking AI Crawlers and Bots",
     "homepage": "https://github.com/mauricerenck/dark-visitors",
     "type": "kirby-plugin",
@@ -15,7 +15,9 @@
         "psr-4": {
             "mauricerenck\\DarkVisitors\\": "plugin"
         },
-        "classmap": ["plugin"]
+        "classmap": [
+            "plugin"
+        ]
     },
     "require": {
         "getkirby/composer-installer": "^1.2",
@@ -33,10 +35,15 @@
         }
     },
     "scripts": {
-        "start": ["Composer\\Config::disableProcessTimeout", "php -S localhost:8000 kirby/router.php"],
+        "start": [
+            "Composer\\Config::disableProcessTimeout",
+            "php -S localhost:8000 kirby/router.php"
+        ],
         "test": "vendor/bin/phpunit --testdox --colors=always tests",
         "build-test-package": "git archive HEAD -o dark-visitors.zip --worktree-attributes",
         "build-composer": "composer install --no-dev --optimize-autoloader",
-        "build-release": ["composer install --no-dev --optimize-autoloader"]
+        "build-release": [
+            "composer install --no-dev --optimize-autoloader"
+        ]
     }
 }
