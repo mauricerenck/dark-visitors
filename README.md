@@ -70,6 +70,14 @@ Add your sitemaps to the robots.txt file:
 ],
 ```
 
+### Tracking/Analytics
+
+Darkvisitors offers a tracking feature. If you want to use it, you can enable it in the config:
+
+```php
+'mauricerenck.dark-visitors.analytics' => true,
+```
+
 ## Learn more about robots.txt and AI crawlers
 
 -   [Google: Robots.txt specifications](https://developers.google.com/search/docs/advanced/robots/robots_txt)
