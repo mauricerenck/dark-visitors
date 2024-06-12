@@ -1,3 +1,10 @@
+## [1.1.2](https://github.com/mauricerenck/dark-visitors/compare/v1.1.1...v1.1.2) (2024-06-12)
+
+
+### Bug Fixes
+
+* use leading slash in path ([c792583](https://github.com/mauricerenck/dark-visitors/commit/c7925834f097574ed0aba3e861fdbacdd5f3a34f))
+
 ## [1.1.1](https://github.com/mauricerenck/dark-visitors/compare/v1.1.0...v1.1.1) (2024-06-12)
 
 
