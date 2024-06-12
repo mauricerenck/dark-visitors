@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/mauricerenck/dark-visitors/compare/v1.1.0...v1.1.1) (2024-06-12)
+
+
+### Bug Fixes
+
+* analytics path as string ([a0291ef](https://github.com/mauricerenck/dark-visitors/commit/a0291efddd2e956f6ecfc63b74d73f32c56e02bc))
+
 # [1.1.0](https://github.com/mauricerenck/dark-visitors/compare/v1.0.1...v1.1.0) (2024-06-11)
 
 
