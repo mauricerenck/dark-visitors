@@ -48,7 +48,7 @@ Kirby::plugin('mauricerenck/darkvisitors', [
                 $api = new Api();
 
                 if (option('mauricerenck.dark-visitors.analytics', false)) {
-                    $requestPath = $request->path();
+                    $requestPath = $request->path()->toString();
                     $requestMethod = $request->method();
                     $requestHeaders = $request->headers();
 
