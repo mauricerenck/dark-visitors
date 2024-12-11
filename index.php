@@ -29,7 +29,7 @@ Kirby::plugin('mauricerenck/darkvisitors', [
                 }
 
                 if (isset($pluginConfig['sitemaps'])) {
-                    $robotTxt = array_merge($robotTxt, $pluginConfig['sitemaps']);
+                    $robotTxt = array_merge($robotTxt, array_map(fn($url) => "Sitemap: $url", $pluginConfig['sitemaps']));
                 }
 
                 if (!is_null($apiEntries)) {
