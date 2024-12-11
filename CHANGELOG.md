@@ -1,3 +1,10 @@
+## [1.1.3](https://github.com/mauricerenck/dark-visitors/compare/v1.1.2...v1.1.3) (2024-12-11)
+
+
+### Bug Fixes
+
+* sitemap entries ([f94bfa6](https://github.com/mauricerenck/dark-visitors/commit/f94bfa6f06f59e520fbf27c4ba00f368e7cc4842))
+
 ## [1.1.2](https://github.com/mauricerenck/dark-visitors/compare/v1.1.1...v1.1.2) (2024-06-12)
 
 
