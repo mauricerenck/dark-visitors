@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/mauricerenck/dark-visitors/compare/v1.1.3...v1.2.0) (2026-02-09)
+
+
+### Features
+
+* block useragents in route ([31a9e5d](https://github.com/mauricerenck/dark-visitors/commit/31a9e5da786582d8de0b2c52aaac1366da67e6c0))
+
 ## [1.1.3](https://github.com/mauricerenck/dark-visitors/compare/v1.1.2...v1.1.3) (2024-12-11)
 
 
