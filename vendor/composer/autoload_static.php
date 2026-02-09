@@ -13,38 +13,38 @@ class ComposerStaticInit245ce61f8c23cb530830ad874720877c
     );
 
     public static $prefixLengthsPsr4 = array (
-        'm' => 
+        'm' =>
         array (
             'mauricerenck\\DarkVisitors\\' => 26,
         ),
-        'R' => 
+        'R' =>
         array (
             'Revolt\\' => 7,
         ),
-        'K' => 
+        'K' =>
         array (
             'Kirby\\' => 6,
         ),
-        'A' => 
+        'A' =>
         array (
             'Amp\\' => 4,
         ),
     );
 
     public static $prefixDirsPsr4 = array (
-        'mauricerenck\\DarkVisitors\\' => 
+        'mauricerenck\\DarkVisitors\\' =>
         array (
             0 => __DIR__ . '/../..' . '/plugin',
         ),
-        'Revolt\\' => 
+        'Revolt\\' =>
         array (
             0 => __DIR__ . '/..' . '/revolt/event-loop/src',
         ),
-        'Kirby\\' => 
+        'Kirby\\' =>
         array (
             0 => __DIR__ . '/..' . '/getkirby/composer-installer/src',
         ),
-        'Amp\\' => 
+        'Amp\\' =>
         array (
             0 => __DIR__ . '/..' . '/amphp/amp/src',
         ),

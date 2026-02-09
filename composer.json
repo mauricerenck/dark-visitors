@@ -25,9 +25,10 @@
         "amphp/amp": "^3.0"
     },
     "require-dev": {
-        "getkirby/cms": "^4",
+        "getkirby/cms": "^5",
         "phpunit/phpunit": "^9.5"
     },
+    "minimum-stability": "dev",
     "config": {
         "optimize-autoloader": true,
         "allow-plugins": {

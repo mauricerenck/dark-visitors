@@ -1,6 +1,6 @@
 # Dark Visitors
 
-Dark Visitors is a plugin for Kirby 3 and 4 that blocks unwanted AI Crawlers from your website using robots.txt. It uses the Dark Visitors API to identify and block unwanted visitors.
+Dark Visitors is a plugin for Kirby that blocks unwanted AI Crawlers from your website using robots.txt. It uses the Dark Visitors API to identify and block unwanted visitors.
 
 It also allows you to add custom rules and your sitemaps to your robots.txt file.
 
@@ -80,5 +80,5 @@ Darkvisitors offers a tracking feature. If you want to use it, you can enable it
 
 ## Learn more about robots.txt and AI crawlers
 
--   [Google: Robots.txt specifications](https://developers.google.com/search/docs/advanced/robots/robots_txt)
--   [Dark Visitors](https://darkvisitors.com/)
+- [Google: Robots.txt specifications](https://developers.google.com/search/docs/advanced/robots/robots_txt)
+- [Dark Visitors](https://darkvisitors.com/)

@@ -2,7 +2,7 @@
 
 namespace mauricerenck\DarkVisitors;
 
-use Kirby;
+use Kirby\Cms\App as Kirby;
 use Kirby\Http\Response;
 use Amp;
 
@@ -18,7 +18,7 @@ Kirby::plugin('mauricerenck/darkvisitors', [
             'method' => 'GET',
             'action' => function () {
                 $api = new Api();
-                $apiEntries = $api->get();
+                $apiEntries = $api->getRobotsTxt();
 
                 $config = new Config();
                 $pluginConfig = $config->getUserConfig();
@@ -61,6 +61,16 @@ Kirby::plugin('mauricerenck/darkvisitors', [
                         $future->await();
                     } catch (\Throwable $e) {
                         echo 'Error' . $e->getMessage();
+                    }
+                }
+
+                if (option('mauricerenck.dark-visitors.force-block', false)) {
+                    // get User Agent
+                    $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
+
+                    // Check if blocked
+                    if ($api->isAgentBlocked($userAgent)) {
+                        return new Response('Access Forbidden', 'text/plain', 403);
                     }
                 }
 
