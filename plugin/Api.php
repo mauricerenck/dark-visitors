@@ -64,6 +64,11 @@ class Api
 
         if ($apiData === null || $agents === null) {
             $apiResult = $this->getLatestAgents();
+
+            if (is_null($apiResult)) {
+                return;
+            }
+
             $agentList = $this->parseRobotsTxt($apiResult);
 
             $apiCache->set('apiData', $apiResult, 1440);
