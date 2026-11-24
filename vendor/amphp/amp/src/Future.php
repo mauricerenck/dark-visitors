@@ -17,11 +17,11 @@ final class Future
     /**
      * Iterate over the given futures in completion order.
      *
-     * @template Tk
+     * @template Tk of array-key
      * @template Tv
      *
      * @param iterable<Tk, Future<Tv>> $futures
-     * @param Cancellation|null        $cancellation Optional cancellation.
+     * @param Cancellation|null $cancellation Optional cancellation.
      *
      * @return iterable<Tk, Future<Tv>>
      */
@@ -39,25 +39,41 @@ final class Future
             }
             $iterator->complete();
         } else {
+            // Hold the iterator through a weak reference so the coroutine below stops consuming the iterable once the
+            // consumer of the returned generator no longer references it.
+            $ref = \WeakReference::create($iterator);
+
             // Use separate fiber for iteration over non-array, because not all items might be immediately available
             // while other futures are already completed.
-            EventLoop::queue(static function () use ($futures, $iterator): void {
+            EventLoop::queue(static function () use ($futures, $ref): void {
+                $enqueue = static function (Future $future, int|string $key) use ($ref): bool {
+                    $iterator = $ref->get();
+                    $iterator?->enqueue($future->state, $key, $future);
+
+                    return $iterator !== null;
+                };
+
                 try {
                     foreach ($futures as $key => $future) {
                         if (!$future instanceof self) {
                             throw new \TypeError('Iterable must only provide instances of ' . self::class);
                         }
-                        $iterator->enqueue($future->state, $key, $future);
+
+                        if (!$enqueue($future, $key)) {
+                            return;
+                        }
                     }
-                    $iterator->complete();
+
+                    $ref->get()?->complete();
                 } catch (\Throwable $exception) {
-                    $iterator->error($exception);
+                    $ref->get()?->error($exception);
                 }
             });
         }
 
         while ($item = $iterator->consume()) {
-            yield $item[0] => $item[1];
+            [$key, $future] = $item;
+            yield $key => $future;
         }
     }
 
@@ -226,7 +242,7 @@ final class Future
         $suspension = EventLoop::getSuspension();
 
         $callbackId = $this->state->subscribe(static function (?\Throwable $error, mixed $value) use (
-            $suspension
+            $suspension,
         ): void {
             if ($error) {
                 $suspension->throw($error);
@@ -239,7 +255,7 @@ final class Future
         $cancellationId = $cancellation?->subscribe(static function (\Throwable $reason) use (
             $callbackId,
             $suspension,
-            $state
+            $state,
         ): void {
             $state->unsubscribe($callbackId);
             if (!$state->isComplete()) { // Resume has already been scheduled if complete.

@@ -2,6 +2,8 @@
 
 namespace Amp\Internal;
 
+use Amp\ForbidCloning;
+use Amp\ForbidSerialization;
 use Amp\Future;
 use Amp\Future\UnhandledFutureError;
 use Revolt\EventLoop;
@@ -13,6 +15,9 @@ use Revolt\EventLoop;
  */
 final class FutureState
 {
+    use ForbidCloning;
+    use ForbidSerialization;
+
     // Static so they can be used as array keys
     private static string $nextId = 'a';
 
@@ -67,7 +72,8 @@ final class FutureState
      */
     public function subscribe(\Closure $callback): string
     {
-        $id = self::$nextId++;
+        $id = self::$nextId;
+        \PHP_VERSION_ID >= 80300 ? self::$nextId = \str_increment(self::$nextId) : ++self::$nextId;
 
         $this->handled = true; // Even if unsubscribed later, consider the future handled.
 

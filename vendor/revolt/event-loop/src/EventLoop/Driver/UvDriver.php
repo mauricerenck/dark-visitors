@@ -14,9 +14,37 @@ use Revolt\EventLoop\Internal\TimerCallback;
 
 final class UvDriver extends AbstractDriver
 {
+    private static ?bool $libuvStopWorkaround = null;
+
     public static function isSupported(): bool
     {
         return \extension_loaded("uv");
+    }
+
+    private static function getLibuvVersion(): ?string
+    {
+        \ob_start();
+        \phpinfo(\INFO_MODULES);
+        $info = (string) \ob_get_clean();
+
+        if (\preg_match('/libuv Version[^0-9]+([0-9.]+)/', $info, $matches)) {
+            return $matches[1];
+        }
+
+        return null;
+    }
+
+    private static function needsStopWorkaround(): bool
+    {
+        if (self::$libuvStopWorkaround === null) {
+            // libuv < 1.45 runs the due timers before polling in UV_RUN_ONCE, then polls with the timeout of the
+            // next timer: without one, it blocks until an I/O event while another handle keeps the loop alive.
+            // If we can't determine the version, assume it is a newer version including the fix.
+            $libuvVersion = self::getLibuvVersion();
+            self::$libuvStopWorkaround = $libuvVersion !== null && \version_compare($libuvVersion, '1.45', '<');
+        }
+
+        return self::$libuvStopWorkaround;
     }
 
     /** @var resource|\UVLoop A uv_loop resource created with uv_loop_new() */
@@ -35,8 +63,11 @@ final class UvDriver extends AbstractDriver
     {
         parent::__construct();
 
+        $stopWorkaround = self::needsStopWorkaround();
+
         $this->handle = \uv_loop_new();
 
+        /** @psalm-suppress UnusedClosureParam */
         $this->ioCallback = function ($event, $status, $events, $resource): void {
             $callbacks = $this->uvCallbacks[(int) $event];
 
@@ -65,12 +96,16 @@ final class UvDriver extends AbstractDriver
             }
         };
 
-        $this->timerCallback = function ($event): void {
+        $this->timerCallback = function ($event) use ($stopWorkaround): void {
             $callback = $this->uvCallbacks[(int) $event][0];
 
             \assert($callback instanceof TimerCallback);
 
             $this->enqueueCallback($callback);
+
+            if ($stopWorkaround) {
+                \uv_stop($this->handle);
+            }
         };
 
         $this->signalCallback = function ($event): void {
@@ -80,9 +115,7 @@ final class UvDriver extends AbstractDriver
         };
     }
 
-    /**
-     * {@inheritdoc}
-     */
+    #[\Override]
     public function cancel(string $callbackId): void
     {
         parent::cancel($callbackId);
@@ -110,14 +143,27 @@ final class UvDriver extends AbstractDriver
         unset($this->events[$callbackId]);
     }
 
+    public function __destruct()
+    {
+        $this->events = [];
+        $this->uvCallbacks = [];
+        $this->streams = [];
+
+        // Reinitialize the loop handle due to indeterminate destruct order.
+        // See https://github.com/revoltphp/event-loop/issues/105
+        $this->handle = \uv_loop_new();
+    }
+
     /**
      * @return \UVLoop|resource
      */
+    #[\Override]
     public function getHandle(): mixed
     {
         return $this->handle;
     }
 
+    #[\Override]
     protected function now(): float
     {
         \uv_update_time($this->handle);
@@ -126,18 +172,14 @@ final class UvDriver extends AbstractDriver
         return \uv_now($this->handle) / 1000;
     }
 
-    /**
-     * {@inheritdoc}
-     */
+    #[\Override]
     protected function dispatch(bool $blocking): void
     {
         /** @psalm-suppress TooManyArguments */
         \uv_run($this->handle, $blocking ? \UV::RUN_ONCE : \UV::RUN_NOWAIT);
     }
 
-    /**
-     * {@inheritdoc}
-     */
+    #[\Override]
     protected function activate(array $callbacks): void
     {
         $now = $this->now();
@@ -205,9 +247,7 @@ final class UvDriver extends AbstractDriver
         }
     }
 
-    /**
-     * {@inheritdoc}
-     */
+    #[\Override]
     protected function deactivate(DriverCallback $callback): void
     {
         $id = $callback->id;

@@ -58,9 +58,7 @@ final class EventDriver extends AbstractDriver
         };
     }
 
-    /**
-     * {@inheritdoc}
-     */
+    #[\Override]
     public function cancel(string $callbackId): void
     {
         parent::cancel($callbackId);
@@ -91,13 +89,15 @@ final class EventDriver extends AbstractDriver
         /** @psalm-suppress RedundantPropertyInitializationCheck */
         if (isset($this->handle)) {
             $this->handle->free();
-            unset($this->handle);
+
+            // Reinitialize the loop handle due to indeterminate destruct order.
+            // See https://github.com/revoltphp/event-loop/issues/105
+            /** @psalm-suppress TooFewArguments https://github.com/JetBrains/phpstorm-stubs/pull/763 */
+            $this->handle = new \EventBase();
         }
     }
 
-    /**
-     * {@inheritdoc}
-     */
+    #[\Override]
     public function run(): void
     {
         $active = self::$activeSignals;
@@ -131,39 +131,32 @@ final class EventDriver extends AbstractDriver
         }
     }
 
-    /**
-     * {@inheritdoc}
-     */
+    #[\Override]
     public function stop(): void
     {
         $this->handle->stop();
         parent::stop();
     }
 
-    /**
-     * {@inheritdoc}
-     */
+    #[\Override]
     public function getHandle(): \EventBase
     {
         return $this->handle;
     }
 
+    #[\Override]
     protected function now(): float
     {
         return (float) \hrtime(true) / 1_000_000_000;
     }
 
-    /**
-     * {@inheritdoc}
-     */
+    #[\Override]
     protected function dispatch(bool $blocking): void
     {
         $this->handle->loop($blocking ? \EventBase::LOOP_ONCE : \EventBase::LOOP_ONCE | \EventBase::LOOP_NONBLOCK);
     }
 
-    /**
-     * {@inheritdoc}
-     */
+    #[\Override]
     protected function activate(array $callbacks): void
     {
         $now = $this->now();
@@ -227,9 +220,7 @@ final class EventDriver extends AbstractDriver
         }
     }
 
-    /**
-     * {@inheritdoc}
-     */
+    #[\Override]
     protected function deactivate(DriverCallback $callback): void
     {
         if (isset($this->events[$id = $callback->id])) {

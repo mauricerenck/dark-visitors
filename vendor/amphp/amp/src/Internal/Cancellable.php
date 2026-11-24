@@ -24,6 +24,7 @@ final class Cancellable implements Cancellation
     private array $callbacks = [];
 
     private ?CancelledException $exception = null;
+
     private ?\Throwable $previous = null;
 
     private bool $requested = false;
@@ -47,7 +48,7 @@ final class Cancellable implements Cancellation
         $exception = $this->getException();
 
         foreach ($callbacks as $callback) {
-            EventLoop::queue(static fn () => $callback($exception));
+            EventLoop::queue($callback, $exception);
         }
     }
 
@@ -56,13 +57,15 @@ final class Cancellable implements Cancellation
         return $this->exception ??= new CancelledException($this->previous);
     }
 
+    #[\Override]
     public function subscribe(\Closure $callback): string
     {
-        $id = $this->nextId++;
+        $id = $this->nextId;
+        \PHP_VERSION_ID >= 80300 ? $this->nextId = \str_increment($this->nextId) : ++$this->nextId;
 
         if ($this->requested) {
             $exception = $this->getException();
-            EventLoop::queue(static fn () => $callback($exception));
+            EventLoop::queue($callback, $exception);
         } else {
             $this->callbacks[$id] = $callback;
         }
@@ -70,16 +73,19 @@ final class Cancellable implements Cancellation
         return $id;
     }
 
+    #[\Override]
     public function unsubscribe(string $id): void
     {
         unset($this->callbacks[$id]);
     }
 
+    #[\Override]
     public function isRequested(): bool
     {
         return $this->requested;
     }
 
+    #[\Override]
     public function throwIfRequested(): void
     {
         if ($this->requested) {

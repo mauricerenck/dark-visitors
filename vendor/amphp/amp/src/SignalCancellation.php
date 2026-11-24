@@ -13,7 +13,7 @@ final class SignalCancellation implements Cancellation
     use ForbidSerialization;
 
     /** @var list<string> */
-    private readonly array $watchers;
+    private readonly array $callbackIds;
 
     private readonly Cancellation $cancellation;
 
@@ -27,19 +27,18 @@ final class SignalCancellation implements Cancellation
             $signals = [$signals];
         }
 
-        $this->cancellation = $source = new Internal\Cancellable;
+        $this->cancellation = $source = new Internal\Cancellable();
 
-        $trace = null; // Defined in case assertions are disabled.
-        \assert((bool) ($trace = \debug_backtrace(0)));
+        \assert((bool) ($trace = \debug_backtrace(\DEBUG_BACKTRACE_IGNORE_ARGS)));
 
-        $watchers = [];
+        $callbackIds = [];
 
-        $callback = static function () use (&$watchers, $source, $message, $trace): void {
-            foreach ($watchers as $watcher) {
-                EventLoop::cancel($watcher);
+        $callback = static function () use (&$callbackIds, &$trace, $source, $message): void {
+            foreach ($callbackIds as $callbackId) {
+                EventLoop::cancel($callbackId);
             }
 
-            if ($trace) {
+            if ($trace ?? false) {
                 $message .= \sprintf("\r\n%s was created here: %s", self::class, Internal\formatStacktrace($trace));
             } else {
                 $message .= \sprintf(" (Enable assertions for a backtrace of the %s creation)", self::class);
@@ -49,10 +48,10 @@ final class SignalCancellation implements Cancellation
         };
 
         foreach ($signals as $signal) {
-            $watchers[] = EventLoop::unreference(EventLoop::onSignal($signal, $callback));
+            $callbackIds[] = EventLoop::unreference(EventLoop::onSignal($signal, $callback));
         }
 
-        $this->watchers = $watchers;
+        $this->callbackIds = $callbackIds;
     }
 
     /**
@@ -60,26 +59,30 @@ final class SignalCancellation implements Cancellation
      */
     public function __destruct()
     {
-        foreach ($this->watchers as $watcher) {
+        foreach ($this->callbackIds as $watcher) {
             EventLoop::cancel($watcher);
         }
     }
 
+    #[\Override]
     public function subscribe(\Closure $callback): string
     {
         return $this->cancellation->subscribe($callback);
     }
 
+    #[\Override]
     public function unsubscribe(string $id): void
     {
         $this->cancellation->unsubscribe($id);
     }
 
+    #[\Override]
     public function isRequested(): bool
     {
         return $this->cancellation->isRequested();
     }
 
+    #[\Override]
     public function throwIfRequested(): void
     {
         $this->cancellation->throwIfRequested();

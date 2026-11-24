@@ -70,9 +70,7 @@ final class EvDriver extends AbstractDriver
         };
     }
 
-    /**
-     * {@inheritdoc}
-     */
+    #[\Override]
     public function cancel(string $callbackId): void
     {
         parent::cancel($callbackId);
@@ -91,11 +89,13 @@ final class EvDriver extends AbstractDriver
         // We need to clear all references to events manually, see
         // https://bitbucket.org/osmanov/pecl-ev/issues/31/segfault-in-ev_timer_stop
         $this->events = [];
+
+        // Reinitialize the loop handle due to indeterminate destruct order.
+        // See https://github.com/revoltphp/event-loop/issues/105
+        $this->handle = new \EvLoop();
     }
 
-    /**
-     * {@inheritdoc}
-     */
+    #[\Override]
     public function run(): void
     {
         $active = self::$activeSignals;
@@ -127,39 +127,32 @@ final class EvDriver extends AbstractDriver
         }
     }
 
-    /**
-     * {@inheritdoc}
-     */
+    #[\Override]
     public function stop(): void
     {
         $this->handle->stop();
         parent::stop();
     }
 
-    /**
-     * {@inheritdoc}
-     */
+    #[\Override]
     public function getHandle(): \EvLoop
     {
         return $this->handle;
     }
 
+    #[\Override]
     protected function now(): float
     {
         return (float) \hrtime(true) / 1_000_000_000;
     }
 
-    /**
-     * {@inheritdoc}
-     */
+    #[\Override]
     protected function dispatch(bool $blocking): void
     {
         $this->handle->run($blocking ? \Ev::RUN_ONCE : \Ev::RUN_ONCE | \Ev::RUN_NOWAIT);
     }
 
-    /**
-     * {@inheritdoc}
-     */
+    #[\Override]
     protected function activate(array $callbacks): void
     {
         $this->handle->nowUpdate();
@@ -206,6 +199,7 @@ final class EvDriver extends AbstractDriver
         }
     }
 
+    #[\Override]
     protected function deactivate(DriverCallback $callback): void
     {
         if (isset($this->events[$id = $callback->id])) {

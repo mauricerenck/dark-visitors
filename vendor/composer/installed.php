@@ -1,8 +1,8 @@
 <?php return array(
     'root' => array(
         'name' => 'mauricerenck/darkvisitors',
-        'pretty_version' => '1.1.2',
-        'version' => '1.1.2.0',
+        'pretty_version' => '1.2.0',
+        'version' => '1.2.0.0',
         'reference' => null,
         'type' => 'kirby-plugin',
         'install_path' => __DIR__ . '/../../',
@@ -13,7 +13,7 @@
         'amphp/amp' => array(
             'pretty_version' => '3.x-dev',
             'version' => '3.9999999.9999999.9999999-dev',
-            'reference' => '7a72295a82006db10119dfc02cdb01bdd0e95a5d',
+            'reference' => '73c38b323ff8d790abf0f76c56fcc892bda4111a',
             'type' => 'library',
             'install_path' => __DIR__ . '/../amphp/amp',
             'aliases' => array(),
@@ -29,8 +29,8 @@
             'dev_requirement' => false,
         ),
         'mauricerenck/darkvisitors' => array(
-            'pretty_version' => '1.1.2',
-            'version' => '1.1.2.0',
+            'pretty_version' => '1.2.0',
+            'version' => '1.2.0.0',
             'reference' => null,
             'type' => 'kirby-plugin',
             'install_path' => __DIR__ . '/../../',
@@ -40,7 +40,7 @@
         'revolt/event-loop' => array(
             'pretty_version' => 'dev-main',
             'version' => 'dev-main',
-            'reference' => '358572ca31647df7dbe930f13c8567136beffa33',
+            'reference' => '93999a4ffca70aaa3890c553001e9f8313a1895c',
             'type' => 'library',
             'install_path' => __DIR__ . '/../revolt/event-loop',
             'aliases' => array(

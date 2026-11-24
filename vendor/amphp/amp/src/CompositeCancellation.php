@@ -36,7 +36,6 @@ final class CompositeCancellation implements Cancellation
             $thatException = $exception;
 
             foreach ($thatCancellations as [$cancellation, $id]) {
-                /** @var Cancellation $cancellation */
                 $cancellation->unsubscribe($id);
             }
 
@@ -58,7 +57,6 @@ final class CompositeCancellation implements Cancellation
     public function __destruct()
     {
         foreach ($this->cancellations as [$cancellation, $id]) {
-            /** @var Cancellation $cancellation */
             $cancellation->unsubscribe($id);
         }
 
@@ -67,9 +65,11 @@ final class CompositeCancellation implements Cancellation
         $this->cancellations = [];
     }
 
+    #[\Override]
     public function subscribe(\Closure $callback): string
     {
-        $id = $this->nextId++;
+        $id = $this->nextId;
+        \PHP_VERSION_ID >= 80300 ? $this->nextId = \str_increment($this->nextId) : ++$this->nextId;
 
         if ($this->exception) {
             EventLoop::queue($callback, $this->exception);
@@ -80,20 +80,39 @@ final class CompositeCancellation implements Cancellation
         return $id;
     }
 
+    #[\Override]
     public function unsubscribe(string $id): void
     {
         unset($this->callbacks[$id]);
     }
 
+    #[\Override]
     public function isRequested(): bool
     {
-        return $this->exception !== null;
+        if ($this->exception) {
+            return true;
+        }
+
+        // Check each cancellation directly, as the callback setting $this->exception is invoked asynchronously.
+        foreach ($this->cancellations as [$cancellation]) {
+            if ($cancellation->isRequested()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
+    #[\Override]
     public function throwIfRequested(): void
     {
         if ($this->exception) {
             throw $this->exception;
+        }
+
+        // Check each cancellation directly, as the callback setting $this->exception is invoked asynchronously.
+        foreach ($this->cancellations as [$cancellation]) {
+            $cancellation->throwIfRequested();
         }
     }
 }

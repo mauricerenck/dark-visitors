@@ -17,8 +17,6 @@ use Revolt\EventLoop\UncaughtThrowable;
  * Callbacks (enabled or new callbacks) MUST immediately be marked as enabled, but only be activated (i.e. callbacks can
  * be called) right before the next tick. Callbacks MUST NOT be called in the tick they were enabled.
  *
- * All registered callbacks MUST NOT be called from a file with strict types enabled (`declare(strict_types=1)`).
- *
  * @internal
  */
 abstract class AbstractDriver implements Driver
@@ -48,6 +46,8 @@ abstract class AbstractDriver implements Driver
 
     private readonly \Closure $interruptCallback;
     private readonly \Closure $queueCallback;
+
+    /** @var \Closure():(null|\Closure(): mixed) */
     private readonly \Closure $runCallback;
 
     private readonly \stdClass $internalSuspensionMarker;
@@ -87,15 +87,23 @@ abstract class AbstractDriver implements Driver
         /** @psalm-suppress InvalidArgument */
         $this->interruptCallback = $this->setInterrupt(...);
         $this->queueCallback = $this->queue(...);
-        $this->runCallback = function () {
-            if ($this->fiber->isTerminated()) {
-                $this->createLoopFiber();
-            }
+        $this->runCallback = function (): ?\Closure {
+            do {
+                if ($this->fiber->isTerminated()) {
+                    $this->createLoopFiber();
+                }
 
-            return $this->fiber->isStarted() ? $this->fiber->resume() : $this->fiber->start();
+                $result = $this->fiber->isStarted() ? $this->fiber->resume() : $this->fiber->start();
+                if ($result) { // Null indicates the loop fiber terminated without suspending.
+                    return $result;
+                }
+            } while (\gc_collect_cycles() && !$this->stopped);
+
+            return null;
         };
     }
 
+    #[\Override]
     public function run(): void
     {
         if ($this->fiber->isRunning()) {
@@ -106,38 +114,39 @@ abstract class AbstractDriver implements Driver
             throw new \Error(\sprintf("Can't call %s() within a fiber (i.e., outside of {main})", __METHOD__));
         }
 
-        if ($this->fiber->isTerminated()) {
-            $this->createLoopFiber();
-        }
-
-        /** @noinspection PhpUnhandledExceptionInspection */
-        $lambda = $this->fiber->isStarted() ? $this->fiber->resume() : $this->fiber->start();
+        $lambda = ($this->runCallback)();
 
         if ($lambda) {
             $lambda();
 
-            throw new \Error('Interrupt from event loop must throw an exception: ' . ClosureHelper::getDescription($lambda));
+            throw new \Error(
+                'Interrupt from event loop must throw an exception: ' . ClosureHelper::getDescription($lambda)
+            );
         }
     }
 
+    #[\Override]
     public function stop(): void
     {
         $this->stopped = true;
     }
 
+    #[\Override]
     public function isRunning(): bool
     {
         return $this->fiber->isRunning() || $this->fiber->isSuspended();
     }
 
+    #[\Override]
     public function queue(\Closure $closure, mixed ...$args): void
     {
         $this->microtaskQueue->enqueue([$closure, $args]);
     }
 
+    #[\Override]
     public function defer(\Closure $closure): string
     {
-        $deferCallback = new DeferCallback($this->nextId++, $closure);
+        $deferCallback = new DeferCallback($this->callbackId(), $closure);
 
         $this->callbacks[$deferCallback->id] = $deferCallback;
         $this->enableDeferQueue[$deferCallback->id] = $deferCallback;
@@ -145,13 +154,14 @@ abstract class AbstractDriver implements Driver
         return $deferCallback->id;
     }
 
+    #[\Override]
     public function delay(float $delay, \Closure $closure): string
     {
         if ($delay < 0) {
             throw new \Error("Delay must be greater than or equal to zero");
         }
 
-        $timerCallback = new TimerCallback($this->nextId++, $delay, $closure, $this->now() + $delay);
+        $timerCallback = new TimerCallback($this->callbackId(), $delay, $closure, $this->now() + $delay);
 
         $this->callbacks[$timerCallback->id] = $timerCallback;
         $this->enableQueue[$timerCallback->id] = $timerCallback;
@@ -159,13 +169,14 @@ abstract class AbstractDriver implements Driver
         return $timerCallback->id;
     }
 
+    #[\Override]
     public function repeat(float $interval, \Closure $closure): string
     {
         if ($interval < 0) {
             throw new \Error("Interval must be greater than or equal to zero");
         }
 
-        $timerCallback = new TimerCallback($this->nextId++, $interval, $closure, $this->now() + $interval, true);
+        $timerCallback = new TimerCallback($this->callbackId(), $interval, $closure, $this->now() + $interval, true);
 
         $this->callbacks[$timerCallback->id] = $timerCallback;
         $this->enableQueue[$timerCallback->id] = $timerCallback;
@@ -173,9 +184,10 @@ abstract class AbstractDriver implements Driver
         return $timerCallback->id;
     }
 
+    #[\Override]
     public function onReadable(mixed $stream, \Closure $closure): string
     {
-        $streamCallback = new StreamReadableCallback($this->nextId++, $closure, $stream);
+        $streamCallback = new StreamReadableCallback($this->callbackId(), $closure, $stream);
 
         $this->callbacks[$streamCallback->id] = $streamCallback;
         $this->enableQueue[$streamCallback->id] = $streamCallback;
@@ -183,9 +195,10 @@ abstract class AbstractDriver implements Driver
         return $streamCallback->id;
     }
 
+    #[\Override]
     public function onWritable($stream, \Closure $closure): string
     {
-        $streamCallback = new StreamWritableCallback($this->nextId++, $closure, $stream);
+        $streamCallback = new StreamWritableCallback($this->callbackId(), $closure, $stream);
 
         $this->callbacks[$streamCallback->id] = $streamCallback;
         $this->enableQueue[$streamCallback->id] = $streamCallback;
@@ -193,9 +206,10 @@ abstract class AbstractDriver implements Driver
         return $streamCallback->id;
     }
 
+    #[\Override]
     public function onSignal(int $signal, \Closure $closure): string
     {
-        $signalCallback = new SignalCallback($this->nextId++, $closure, $signal);
+        $signalCallback = new SignalCallback($this->callbackId(), $closure, $signal);
 
         $this->callbacks[$signalCallback->id] = $signalCallback;
         $this->enableQueue[$signalCallback->id] = $signalCallback;
@@ -203,6 +217,7 @@ abstract class AbstractDriver implements Driver
         return $signalCallback->id;
     }
 
+    #[\Override]
     public function enable(string $callbackId): string
     {
         if (!isset($this->callbacks[$callbackId])) {
@@ -229,12 +244,14 @@ abstract class AbstractDriver implements Driver
         return $callbackId;
     }
 
+    #[\Override]
     public function cancel(string $callbackId): void
     {
         $this->disable($callbackId);
         unset($this->callbacks[$callbackId]);
     }
 
+    #[\Override]
     public function disable(string $callbackId): string
     {
         if (!isset($this->callbacks[$callbackId])) {
@@ -264,6 +281,7 @@ abstract class AbstractDriver implements Driver
         return $callbackId;
     }
 
+    #[\Override]
     public function reference(string $callbackId): string
     {
         if (!isset($this->callbacks[$callbackId])) {
@@ -275,6 +293,7 @@ abstract class AbstractDriver implements Driver
         return $callbackId;
     }
 
+    #[\Override]
     public function unreference(string $callbackId): string
     {
         if (!isset($this->callbacks[$callbackId])) {
@@ -286,6 +305,7 @@ abstract class AbstractDriver implements Driver
         return $callbackId;
     }
 
+    #[\Override]
     public function getSuspension(): Suspension
     {
         $fiber = \Fiber::getCurrent();
@@ -313,45 +333,45 @@ abstract class AbstractDriver implements Driver
         return $suspension;
     }
 
+    #[\Override]
     public function setErrorHandler(?\Closure $errorHandler): void
     {
         $this->errorHandler = $errorHandler;
     }
 
+    #[\Override]
     public function getErrorHandler(): ?\Closure
     {
         return $this->errorHandler;
     }
 
+    #[\Override]
     public function __debugInfo(): array
     {
         // @codeCoverageIgnoreStart
         return \array_map(fn (DriverCallback $callback) => [
-            'type' => $this->getType($callback->id),
+            'type' => $callback->getType(),
             'enabled' => $callback->enabled,
             'referenced' => $callback->referenced,
         ], $this->callbacks);
         // @codeCoverageIgnoreEnd
     }
 
+    #[\Override]
     public function getIdentifiers(): array
     {
         return \array_keys($this->callbacks);
     }
 
+    #[\Override]
     public function getType(string $callbackId): CallbackType
     {
         $callback = $this->callbacks[$callbackId] ?? throw InvalidCallbackError::invalidIdentifier($callbackId);
 
-        return match ($callback::class) {
-            DeferCallback::class => CallbackType::Defer,
-            TimerCallback::class => $callback->repeat ? CallbackType::Repeat : CallbackType::Delay,
-            StreamReadableCallback::class => CallbackType::Readable,
-            StreamWritableCallback::class => CallbackType::Writable,
-            SignalCallback::class => CallbackType::Signal,
-        };
+        return $callback->getType();
     }
 
+    #[\Override]
     public function isEnabled(string $callbackId): bool
     {
         $callback = $this->callbacks[$callbackId] ?? throw InvalidCallbackError::invalidIdentifier($callbackId);
@@ -359,6 +379,7 @@ abstract class AbstractDriver implements Driver
         return $callback->enabled;
     }
 
+    #[\Override]
     public function isReferenced(string $callbackId): bool
     {
         $callback = $this->callbacks[$callbackId] ?? throw InvalidCallbackError::invalidIdentifier($callbackId);
@@ -368,6 +389,8 @@ abstract class AbstractDriver implements Driver
 
     /**
      * Activates (enables) all the given callbacks.
+     *
+     * @param array<string, DriverCallback> $callbacks
      */
     abstract protected function activate(array $callbacks): void;
 
@@ -416,7 +439,7 @@ abstract class AbstractDriver implements Driver
      */
     abstract protected function now(): float;
 
-    private function invokeMicrotasks(): void
+    private function invokeMicrotasks(\Fiber $fiber): void
     {
         while (!$this->microtaskQueue->isEmpty()) {
             [$callback, $args] = $this->microtaskQueue->dequeue();
@@ -431,6 +454,10 @@ abstract class AbstractDriver implements Driver
             }
 
             unset($callback, $args);
+
+            if ($fiber !== $this->callbackFiber) {
+                return;
+            }
 
             if ($this->interrupt) {
                 /** @noinspection PhpUnhandledExceptionInspection */
@@ -494,9 +521,14 @@ abstract class AbstractDriver implements Driver
     {
         while (!$this->microtaskQueue->isEmpty() || !$this->callbackQueue->isEmpty()) {
             /** @noinspection PhpUnhandledExceptionInspection */
-            $yielded = $this->callbackFiber->isStarted()
-                ? $this->callbackFiber->resume()
-                : $this->callbackFiber->start();
+            if ($this->callbackFiber->isSuspended()) {
+                $yielded = $this->callbackFiber->resume();
+            } else {
+                if ($this->callbackFiber->isTerminated()) {
+                    $this->createCallbackFiber();
+                }
+                $yielded = $this->callbackFiber->start();
+            }
 
             if ($yielded !== $this->internalSuspensionMarker) {
                 $this->createCallbackFiber();
@@ -559,11 +591,13 @@ abstract class AbstractDriver implements Driver
     private function createCallbackFiber(): void
     {
         $this->callbackFiber = new \Fiber(function (): void {
-            do {
-                $this->invokeMicrotasks();
+            /** @var \Fiber $fiber */
+            $fiber = \Fiber::getCurrent();
 
-                while (!$this->callbackQueue->isEmpty()) {
-                    /** @var DriverCallback $callback */
+            do {
+                $this->invokeMicrotasks($fiber);
+
+                while ($fiber === $this->callbackFiber && !$this->callbackQueue->isEmpty()) {
                     $callback = $this->callbackQueue->dequeue();
 
                     if (!isset($this->callbacks[$callback->id]) || !$callback->invokable) {
@@ -609,12 +643,20 @@ abstract class AbstractDriver implements Driver
 
                     unset($callback);
 
+                    if ($fiber !== $this->callbackFiber) {
+                        return;
+                    }
+
                     if ($this->interrupt) {
                         /** @noinspection PhpUnhandledExceptionInspection */
                         \Fiber::suspend($this->internalSuspensionMarker);
                     }
 
-                    $this->invokeMicrotasks();
+                    $this->invokeMicrotasks($fiber);
+                }
+
+                if ($fiber !== $this->callbackFiber) {
+                    return;
                 }
 
                 /** @noinspection PhpUnhandledExceptionInspection */
@@ -634,5 +676,32 @@ abstract class AbstractDriver implements Driver
                     : throw UncaughtThrowable::throwingErrorHandler($errorHandler, $exception);
             }
         };
+    }
+
+    private function callbackId(): string
+    {
+        $callbackId = $this->nextId;
+
+        if (\PHP_VERSION_ID >= 80300) {
+            /** @psalm-suppress UndefinedFunction */
+            $this->nextId = \str_increment($this->nextId);
+        } else {
+            $this->nextId++;
+        }
+
+        return $callbackId;
+    }
+
+    final public function __serialize(): never
+    {
+        throw new \Error(__CLASS__ . ' does not support serialization');
+    }
+
+    /**
+     * @psalm-suppress UnusedParam $data param required.
+     */
+    final public function __unserialize(array $data): never
+    {
+        throw new \Error(__CLASS__ . ' does not support deserialization');
     }
 }
