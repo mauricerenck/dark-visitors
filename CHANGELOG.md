@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/mauricerenck/dark-visitors/compare/v1.2.1...v1.3.0) (2026-11-24)
+
+
+### Features
+
+* k6 release ([d4da092](https://github.com/mauricerenck/dark-visitors/commit/d4da0920bef096d0ef7dcf3b3ee3a5a3c4bce84a))
+
 ## [1.2.1](https://github.com/mauricerenck/dark-visitors/compare/v1.2.0...v1.2.1) (2026-07-16)
 
 
